@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #d4f8d4; /* Light baby green */
+            font-family: 'Roboto', sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+            max-width: 600px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .title {
+            font-size: 2rem;
+            font-weight: 500;
+            color: #2d6a2d;
+        }
+        .btn-upload {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+            font-size: 1.1rem;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.2s;
+        }
+        .btn-upload:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .result h4 {
+            font-size: 1.5rem;
+            color: #2d6a2d;
+        }
+        .dish-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .dish-item {
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .dish-name {
+            font-weight: bold;
+            color: #28a745;
+        }
+        .dish-category {
+            color: #555;
+            font-size: 1rem;
+        }
+        .dish-calories {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        #uploaded-image {
+            max-width: 250px;  
+            max-height: 250px;
+            display: block;
+            margin: 15px auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 3px solid #28a745;
+        }
+        /* Custom color styles for categories */
+        .healthy {
+            background-color: #d4f8d4; /* Light green */
+        }
+        .moderately-healthy {
+            background-color: #fff9c4; /* Light yellow */
+        }
+        .unhealthy {
+            background-color: #ffcccb; /* Light red */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="title">Upload Menu Image for Classification</h2>
+
+        <!-- Image Upload Form -->
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <input type="file" name="file" id="file-input" class="form-control-file" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-upload">Upload Image</button>
+        </form>
+
+        <div id="result" class="result">
+            <!-- Image will be displayed here -->
+            <img id="uploaded-image" style="display: none;">
+            <!-- Results will be displayed here -->
+        </div>
+    </div>
+
+    <!-- Script to handle form submission -->
+    <script>
+        document.getElementById('upload-form').onsubmit = function(event) {
+            event.preventDefault();
+
+            let formData = new FormData();
+            let fileInput = document.getElementById('file-input');
+            let file = fileInput.files[0];
+
+            if (!file) return;
+
+            formData.append('file', file);
+
+            // Display the uploaded image
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let uploadedImage = document.getElementById('uploaded-image');
+                uploadedImage.src = e.target.result;
+                uploadedImage.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                let resultDiv = document.getElementById('result');
+                if (data.status === 'success') {
+                    let htmlContent = '<h4>Classified Dishes:</h4><ul class="dish-list">';
+                    data.dishes.forEach(dish => {
+                        let categoryClass = '';
+                        if (dish.category.toLowerCase() === 'healthy') {
+                            categoryClass = 'healthy';
+                        } else if (dish.category.toLowerCase() === 'moderately healthy') {
+                            categoryClass = 'moderately-healthy';
+                        } else if (dish.category.toLowerCase() === 'unhealthy') {
+                            categoryClass = 'unhealthy';
+                        }
+                        htmlContent += `
+                            <li class="dish-item ${categoryClass}">
+                                <span class="dish-name">${dish.dish_name}</span> - 
+                                <span class="dish-category">${dish.category}</span> 
+                                <span class="dish-calories">(${dish.calories} calories)</span>
+                            </li>
+                        `;
+                    });
+                    htmlContent += '</ul>';
+                    resultDiv.innerHTML += htmlContent;
+                } else {
+                    resultDiv.innerHTML += `<p>No dishes detected or classified. Please check the image.</p>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML += `<p>Error: ${error.message}</p>`;
+            });
+        };
+    </script>
+</body>
+</html>
